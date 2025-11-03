@@ -67,13 +67,28 @@ class HotelService {
     return hotels;
   }
 
-  async getById(id) {
+async getById(id) {
     await delay(200);
     const hotel = hotelsData.find(h => h.Id === parseInt(id));
     if (!hotel) {
       throw new Error("Hotel not found");
     }
-    return { ...hotel };
+    
+    // Get review statistics
+    try {
+      const reviewService = await import("@/services/api/reviewService.js");
+      const reviewStats = await reviewService.default.getHotelStats(parseInt(id));
+      
+      return { 
+        ...hotel, 
+        rating: reviewStats.averageRating || hotel.rating,
+        reviewCount: reviewStats.totalReviews || hotel.reviewCount || 0,
+        reviewStats: reviewStats.ratingDistribution
+      };
+    } catch (err) {
+      // Fallback to original hotel data if review service fails
+      return { ...hotel };
+    }
   }
 
   async getFeatured() {

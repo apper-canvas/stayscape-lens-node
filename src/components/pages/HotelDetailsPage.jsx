@@ -7,12 +7,13 @@ import Error from "@/components/ui/Error";
 import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
 import ApperIcon from "@/components/ApperIcon";
+import ReviewCard from "@/components/molecules/ReviewCard";
 import hotelService from "@/services/api/hotelService";
-
+import reviewService from "@/services/api/reviewService";
 const HotelDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [hotel, setHotel] = useState(null);
+const [hotel, setHotel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -20,7 +21,8 @@ const HotelDetailsPage = () => {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
-
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const loadHotel = async () => {
     try {
       setError(null);
@@ -34,11 +36,24 @@ const HotelDetailsPage = () => {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
     loadHotel();
+    loadReviews();
   }, [id]);
+  
+  async function loadReviews() {
+    try {
+      setReviewsLoading(true);
+      const hotelReviews = await reviewService.getByHotelId(parseInt(id));
+      setReviews(hotelReviews.slice(0, 3)); // Show only first 3 reviews
+    } catch (err) {
+      console.error("Failed to load reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
 
-  const handleBookNow = () => {
+const handleBookNow = () => {
     if (!checkIn || !checkOut) {
       alert("Please select check-in and check-out dates");
       return;
@@ -53,6 +68,14 @@ const HotelDetailsPage = () => {
     
     // Navigate to booking flow with data
     navigate("/booking", { state: { hotel, bookingData } });
+  };
+
+  const handleWriteReview = () => {
+    navigate("/reviews", { state: { hotel } });
+  };
+
+  const handleViewAllReviews = () => {
+    navigate("/reviews", { state: { hotel } });
   };
 
   const renderStars = (rating) => {
@@ -144,11 +167,19 @@ const HotelDetailsPage = () => {
                   {renderStars(hotel.starRating)}
                   <span className="ml-2 text-sm text-gray-600">{hotel.starRating} Star Hotel</span>
                 </div>
-                <div className="flex items-center bg-primary-50 rounded-lg px-3 py-2">
+<div className="flex items-center bg-primary-50 rounded-lg px-3 py-2">
                   <ApperIcon name="Star" className="w-4 h-4 text-amber-400 fill-current mr-1" />
                   <span className="font-medium text-primary-700">{hotel.rating}</span>
                   <span className="text-sm text-gray-600 ml-2">({hotel.reviewCount} reviews)</span>
                 </div>
+                <Button
+                  variant="secondary"
+                  onClick={handleWriteReview}
+                  className="ml-3"
+                >
+                  <ApperIcon name="Edit3" className="w-4 h-4 mr-2" />
+                  Write Review
+                </Button>
               </div>
             </motion.div>
 
@@ -197,7 +228,85 @@ const HotelDetailsPage = () => {
                   <p>{hotel.location.city}, {hotel.location.state}</p>
                   <p className="text-sm">{hotel.address}</p>
                 </div>
-              </div>
+</div>
+              
+              {/* Reviews Section */}
+              <motion.div 
+                className="bg-white rounded-lg shadow-card p-6 mt-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Guest Reviews</h2>
+                  <Button variant="secondary" onClick={handleViewAllReviews}>
+                    View All Reviews
+                  </Button>
+                </div>
+                
+                {reviewsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  </div>
+                ) : reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Rating Summary */}
+                    <div className="flex items-center space-x-6 p-4 bg-gray-50 rounded-lg">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-gray-900">{hotel.rating}</div>
+                        <div className="flex justify-center space-x-1 mt-1">
+                          {renderStars(Math.round(hotel.rating))}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">{hotel.reviewCount} reviews</div>
+                      </div>
+                      
+                      {hotel.reviewStats && (
+                        <div className="flex-1">
+                          {[5, 4, 3, 2, 1].map(rating => (
+                            <div key={rating} className="flex items-center mb-1">
+                              <span className="text-sm w-3">{rating}</span>
+                              <ApperIcon name="Star" className="w-3 h-3 text-amber-400 fill-current mx-2" />
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-amber-400 h-2 rounded-full"
+                                  style={{ 
+                                    width: `${hotel.reviewStats[rating] ? (hotel.reviewStats[rating] / hotel.reviewCount) * 100 : 0}%` 
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-gray-600 ml-2 w-8">
+                                {hotel.reviewStats[rating] || 0}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Recent Reviews */}
+                    {reviews.map(review => (
+                      <ReviewCard key={review.Id} review={review} />
+                    ))}
+                    
+                    <div className="text-center pt-4">
+                      <Button variant="secondary" onClick={handleViewAllReviews}>
+                        <ApperIcon name="ExternalLink" className="w-4 h-4 mr-2" />
+                        View All {hotel.reviewCount} Reviews
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <ApperIcon name="MessageSquare" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No reviews yet</h3>
+                    <p className="text-gray-600 mb-4">Be the first to share your experience!</p>
+                    <Button onClick={handleWriteReview}>
+                      <ApperIcon name="Edit3" className="w-4 h-4 mr-2" />
+                      Write First Review
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
           </div>
 

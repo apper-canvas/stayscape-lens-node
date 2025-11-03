@@ -11,6 +11,7 @@ import DashboardPage from "@/components/pages/DashboardPage";
 import ProfilePage from "@/components/pages/ProfilePage";
 import AboutPage from "@/components/pages/AboutPage";
 import AuthPage from "@/components/pages/AuthPage";
+import ReviewsPage from "@/components/pages/ReviewsPage";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
